@@ -33,6 +33,9 @@ Developed as part of the **Vector India Embedded Systems Industry Training Progr
 
 ## 🏗️ System Architecture
 
+###Block diagram
+<img width="1472" height="1240" alt="image" src="https://github.com/user-attachments/assets/ef4f6336-216a-401c-a9ac-07103072592d" />
+
 ### State Machine
 
 ```
