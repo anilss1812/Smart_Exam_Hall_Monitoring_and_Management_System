@@ -325,13 +325,12 @@ During development, several important embedded programming issues were encounter
 
 **Tumma Anil Sri Sai**  
 B.Tech Electronics and Communication Engineering  
-Sasi Institute of Technology and Engineering, Tadepalligudem (2026)
 
 **Training:** 6-month Embedded Systems Industry Program — Vector India, Hyderabad  
 **Progression:** C Programming → ARM7 Architecture → DSA → Project
 
 **Connect:**  
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://linkedin.com/in/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://linkedin.com/in/tumma-anil-sri-sai)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-black)](https://github.com/anilss1812)
 
 ---
@@ -342,4 +341,4 @@ This project is open-source under the MIT License. Feel free to use, modify, and
 
 ---
 
-*Developed during Vector India Embedded Systems Training Program, 2025–2026*
+*Developed during Vector India Embedded Systems Training Program, 2026*
