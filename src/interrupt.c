@@ -19,12 +19,14 @@ void eint0_isr(void)__irq
 
 void eint1_isr(void)__irq
 {
-	pause_flag =1;
-	//delay for debouncing 
-	delay_ms(200);	
-	EXTINT =(1<<1);
-	//DAMY 
-	VICVectAddr = 0;
+	EXTINT = (1<<1);        // clear flag first
+    delay_ms(20);           // debounce wait
+    if(((IOPIN0>>3)&1)==0)  // re-check pin still low
+    {
+        pause_flag = 1;
+    }
+	//DAMY
+    VICVectAddr = 0;
 }
 
 void enable_Eint0(void)
