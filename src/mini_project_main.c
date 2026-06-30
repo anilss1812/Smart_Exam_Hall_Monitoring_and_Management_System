@@ -175,7 +175,7 @@ int main()
 							}
 				break;
 			}
-
+//--------------------------------------------------------------------
 			case cfg :
 			{
 				ex_time_submenu_run = 1; 
@@ -470,12 +470,13 @@ int main()
 					 //lcd line 2 position 0
 						strLcd("       PAUSED");           //dsp MENU option 2
 						delay_ms(1000);
-						
+					pause_flag = 0 ;//make it as defalut			
 					}
 					else
 					{
 						strLcd("       RESUMED");
 						delay_ms(1000);  
+						pause_flag = 0 ;//make it as defalut
 						cmdLcd(GOTO_LINE2_POS0);
 						strLcd("REMAINING:");           //dsp remaining time
 						U32Lcd(remaining_time);   //shows remaining time on dsp
@@ -576,9 +577,6 @@ int main()
 		}
  } 
 }
-
-
-
 
 
 
