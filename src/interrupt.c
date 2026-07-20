@@ -2,8 +2,9 @@
 #include <lpc21xx.h>
 #include "types.h"
 #include "defines.h"
-#include "mini_pro_defines.h"
-#include "headers.h"
+#include "delay.h"
+#include "interrupt_defines.h"
+
 vu8 menu_flag = 0 ;
 vu8 pause_flag = 0;
 
