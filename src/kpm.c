@@ -2,8 +2,11 @@
 
 #include "types.h"
 #include <lpc21xx.h>
-#include "mini_pro_defines.h"
-#include "headers.h"
+#include "kpm_defines.h"
+#include "lcd_defines.h"
+#include "lcd.h"
+#include "delay.h"
+
 
 
 u8 KpmLUT[4][4] =	{{'1','2','3','A'},
