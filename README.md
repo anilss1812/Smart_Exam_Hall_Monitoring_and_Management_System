@@ -419,7 +419,6 @@ Training track: C → ARM7 architecture → DSA → C++ → Linux internals → 
 B.Tech Electronics and Communication Engineering  
 
 **Training:** 6-month Embedded Systems Industry Program — Vector India, Hyderabad  
-**Progression:** C Programming → ARM7 Architecture → DSA → Project
 
 **Connect:**  
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://linkedin.com/in/tumma-anil-sri-sai)
