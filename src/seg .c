@@ -1,10 +1,10 @@
 //seg.c
 #include <lpc21xx.h>
-#include "headers.h"
 #include "types.h"
 #include "defines.h"
-#include "mini_pro_defines.h"
- 
+#include "seg_defines.h"
+#include "delay.h"
+
 
 const u8 seg_LUT[10] =
    {
