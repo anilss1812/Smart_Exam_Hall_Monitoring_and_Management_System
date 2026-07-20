@@ -2,7 +2,7 @@
 
 #include <lpc21xx.h>
 #include "types.h"
-#include "headers.h"
+#include "seg.h"
 
 volatile u32 ms_tick = 0; 
 
