@@ -1,7 +1,28 @@
 //mini_project_main.c
 #include <LPC21xx.h>
-#include "mini_pro_defines.h"
-#include "headers.h"
+#include "adc.h"
+#include "adc_defines.h"
+#include "interrupt.h"
+#include "kpm.h"
+#include "kpm_defines.h"
+#include "lcd.h"
+#include "lcd_defines.h"
+#include "lm35.h"
+#include "rtc.h"
+#include "seg.h"
+#include "seg_defines.h"
+#include "timer.h"
+#include "rtc_defines.h"
+#include "delay.h"
+
+//-----------defines---------------------
+#define LED_GREEN 26 //P1.26
+#define LED_YELLOW 27 //P1.27
+#define LED_RED    28 //P1.28
+
+#define BUZZER 29 //P1.29
+
+
 
 //------------------GLOBALAS---------------------
 
