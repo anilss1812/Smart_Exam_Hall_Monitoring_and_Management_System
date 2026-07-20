@@ -2,8 +2,8 @@
 
 #include <lpc21xx.h>
 #include "types.h"
-#include "mini_pro_defines.h"
-#include "headers.h"
+#include "adc_defines.h"
+#include "delay.h"
 
 void adc_Init(void)
 {
