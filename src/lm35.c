@@ -1,7 +1,8 @@
 //lm35.c
 #include "types.h"
-#include "headers.h"
-#include "mini_pro_defines.h"
+#include "adc_defines.h"
+#include "adc.h"
+
 
 f32 read_Lm35Degc(void)
 {
