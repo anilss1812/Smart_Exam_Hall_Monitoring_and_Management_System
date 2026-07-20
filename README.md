@@ -1,328 +1,417 @@
-# 🎓 Smart Exam Hall Monitoring and Management System
+# Smart Exam Hall Monitoring and Management System
 
-> **Bare-metal embedded firmware for automated examination hall management**  
-> Built on ARM7TDMI-S (LPC2148/LPC2129) — fully register-level, zero HAL abstraction
-
----
-
-## 📌 Overview
-
-An intelligent embedded solution that automates examination timing, environmental monitoring, and status indication in examination halls. The system eliminates manual timing errors and reduces invigilator workload through hardware-driven automation.
-
-Developed as part of the **Vector India Embedded Systems Industry Training Program** (C → ARM Architecture → DSA progression), Hyderabad.
+> Bare-metal embedded firmware on ARM7TDMI-S (LPC2148 / LPC2129)  
+> Register-level drivers · No HAL · No RTOS · VIC interrupt architecture
 
 ---
 
-## ✨ Features
+## What this does
 
-| Feature | Description |
+Automates examination timing and hall management. The system starts and ends the exam automatically based on a pre-configured time, counts down the remaining duration on a 7-segment display, monitors room temperature, and provides LED + buzzer alerts — all without any manual intervention from the invigilator during the exam itself.
+
+---
+
+## Platform
+
+| | |
 |---|---|
-| ⏱️ RTC-based auto-start | Exam starts automatically when RTC time matches configured start time |
-| ⏳ Countdown timer | Minute-by-minute countdown from configured duration (up to 99 min) |
-| 🔢 7-Segment display | Remaining exam minutes shown on dual multiplexed 7-seg display |
-| 🌡️ Temperature monitoring | Continuous room temperature display via LM35 sensor (ADC) |
-| 🔐 Password protection | 4-digit password-protected configuration menu |
-| 🕐 RTC editing | Set/update current date and time via keypad |
-| ⏸️ Pause/Resume | Emergency pause via external interrupt (EINT1), resumable |
-| 🚨 LED status alerts | Green (>3 min) → Yellow (1-3 min) → Red (<1 min) |
-| 🔔 Buzzer notification | Audio alert when exam countdown reaches zero |
-| 🔑 Password change | Change admin password with old-password verification |
-| 📅 Date/time validation | Input validation (hour 0-23, min 0-59, day 1-31, month 1-12) |
+| MCU | NXP LPC2148 (ARM7TDMI-S, 60 MHz, LQFP64) |
+| Dev board | Vector India Advanced Development Board |
+| Simulation | LPC2124/LPC2129 on Proteus ISIS |
+| IDE | Keil MDK (µVision) |
+| Flash tool | Flash Magic (ISP via UART) |
+| Language | Embedded C — bare-metal, register-level |
 
 ---
 
-## 🏗️ System Architecture
-
-###Block diagram
-<img width="1472" height="1240" alt="image" src="https://github.com/user-attachments/assets/ef4f6336-216a-401c-a9ac-07103072592d" />
-
-### State Machine
+## Block Diagram
 
 ```
-                    ┌─────────────────────────────────┐
-         ┌─────────►│           IDLE_MODE              │◄──────────────┐
-         │          │  • LCD: TIME / DATE / TEMP       │               │
-         │          │  • 7-seg: 00                     │               │
-         │          │  • Monitors exam start time      │               │
-         │          └──────────────┬──────────────┬────┘               │
-         │                        │              │                      │
-         │               EINT0    │              │ RTC matches          │
-         │               press    ▼              │ start time           │
-         │          ┌─────────────────────┐      │                      │
-         │          │    CONFIG_MODE      │      │                      │
-         │          │  • Password entry   │      │                      │
-         │          │  • RTC edit         │      │                      │
-         │          │  • Exam time setup  │      │                      │
-         │          │  • Duration config  │      │                      │
-         │          │  • Password change  │      │                      │
-         │          └─────────────────────┘      │                      │
-         │                                       ▼                      │
-         │                          ┌────────────────────────┐          │
-         │              ┌──────────►│      EXAM_RUNNING      │          │
-         │              │           │  • Countdown active    │          │
-         │   EINT1      │           │  • LCD: time+temp+rem  │          │
-         │   resume     │           │  • 7-seg: min countdown│          │
-         │              │           │  • LED alerts active   │          │
-         │              │           └────────────┬──────────┬┘          │
-         │              │                        │          │            │
-         │   ┌──────────┴──────┐      countdown  │  EINT1   │            │
-         │   │  EXAM_PAUSED    │      reaches 0  │  press   │            │
-         │   │  (via toggle)   │                 │  pause   │            │
-         │   └─────────────────┘                 │          │            │
-         │                                       ▼          ▼            │
-         │                          ┌────────────────────────┐          │
-         └──────────────────────────│       EXAM_ENDED       │──────────┘
-                     EINT0          │  • Buzzer ON (5 sec)   │
-                     press          │  • "EXAM OVER" on LCD  │
-                                    │  • RED LED ON          │
-                                    └────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                        INPUTS                                        │
+│                                                                      │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐             │
+│  │  4×4 Keypad │    │EINT0 (Cfg SW)│    │EINT1 (Pause)│            │
+│  │ P1.16–P1.23 │    │    P0.1     │    │    P0.3     │             │
+│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘             │
+│         │                  │                   │                     │
+│  ┌──────┴──────┐    ┌──────┴──────┐           │                    │
+│  │  LM35 Sensor│    │ RTC Crystal │           │                    │
+│  │ P0.28(AD0.1)│    │  32.768 KHz │           │                    │
+│  └──────┬──────┘    └──────┬──────┘           │                    │
+└─────────┼─────────────────┼──────────────────┼────────────────────┘
+          │                 │                  │
+          ▼                 ▼                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                      │
+│                        LPC2148                                       │
+│                    ARM7TDMI-S 60MHz                                  │
+│                                                                      │
+│   ┌───────────────────┐    ┌────────────────────────────────────┐  │
+│   │   Timer0 ISR      │    │         VIC                        │  │
+│   │  1ms tick         │    │  Slot0: Timer0 (ch4)               │  │
+│   │  refreshSeg() 5ms │    │  Slot1: EINT0  (ch14)              │  │
+│   └───────────────────┘    │  Slot2: EINT1  (ch15)              │  │
+│                             └────────────────────────────────────┘  │
+│   ┌───────────────────────────────────────────────────────────────┐ │
+│   │              State Machine                                    │ │
+│   │  IDLE → CONFIG → IDLE → EXAM_RUNNING → EXAM_END → IDLE       │ │
+│   └───────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          ▼                    ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        OUTPUTS                                       │
+│                                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │ 20×4 LCD │  │  7-Seg   │  │Green LED │  │Yellow LED│           │
+│  │P0.8–P0.17│  │P0.18–P1.25│ │  P1.26   │  │  P1.27   │          │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘           │
+│                                                                      │
+│  ┌──────────┐  ┌──────────┐                                        │
+│  │  Red LED │  │  Buzzer  │                                        │
+│  │  P1.28   │  │  P1.29   │                                        │
+│  └──────────┘  └──────────┘                                        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Design Decisions
+---
 
-- **No HAL/RTOS** — all peripherals driven at register level (IODIR, IOPIN, IOSET, IOCLR, VIC, EXTMODE, ADCR, CCR, etc.)
-- **Timer0 ISR** drives 7-seg multiplexing (5ms refresh, non-blocking) — frees main loop entirely
-- **RTC hardware** provides 1-second tick reference for countdown and display updates
-- **External interrupts** (EINT0/EINT1) handle config trigger and pause/resume via VIC
-- **Blocking CONFIG_MODE** — acceptable since config is invigilator-initiated, not time-critical
+## System Flow
+
+```
+Power ON
+    │
+    ▼
+┌─────────────────────────────┐
+│         IDLE MODE            │
+│  LCD: TIME / DATE / TEMP     │◄─────────────────────────┐
+│  7-seg: 00                   │                           │
+│  Monitors exam start time    │                           │
+└──────────┬───────────────────┘                           │
+           │                                               │
+     ┌─────┴─────┐                                        │
+     │           │                                        │
+  EINT0       RTC matches                                  │
+  press       start time                                   │
+     │           │                                        │
+     ▼           ▼                                        │
+┌──────────┐  ┌────────────────────────────────────┐      │
+│  CONFIG  │  │         EXAM RUNNING                │      │
+│  MODE    │  │  LCD: time + temp + remaining       │      │
+│          │  │  7-seg: countdown in minutes        │      │
+│ Password │  │  Green LED  >3 min remaining        │      │
+│ RTC edit │  │  Yellow LED  1-3 min remaining      │      │
+│ Exam time│  │  Red LED    <1 min remaining        │      │
+│ Duration │  │                                     │      │
+│ Password │  │  EINT1 press → PAUSED               │      │
+│ change   │  │  EINT1 press → RESUMED              │      │
+└────┬─────┘  └──────────────┬─────────────────────┘      │
+     │                       │ countdown = 0               │
+     │ exit                  ▼                             │
+     │              ┌─────────────────┐                   │
+     └─────────────►│   EXAM ENDED    │───────────────────┘
+                    │  Buzzer 5 sec   │  EINT0 press
+                    │  Red LED ON     │  to acknowledge
+                    │  EXAM OVER msg  │
+                    └─────────────────┘
+```
 
 ---
 
-## 🔧 Hardware
+## Configuration Menu Tree
 
-### Primary Platform
-
-| Component | Details |
-|---|---|
-| MCU | NXP LPC2148 (ARM7TDMI-S, 60MHz, LQFP64) |
-| Development Board | Vector India Advanced Development Board |
-| Crystal | 12MHz (main) + 32.768KHz (RTC) |
-| LCD | JHD 204A — 20×4 character display (HD44780 compatible) |
-| Keypad | 4×4 matrix keypad |
-| 7-Segment | Dual common-anode 7-segment (multiplexed) |
-| Temperature | LM35 analog sensor (10mV/°C) |
-| LEDs | 3× (Green/Yellow/Red) — active LOW |
-| Buzzer | Active HIGH (driven via BC109 NPN transistor) |
-
-### Simulation Platform
-
-| Component | Details |
-|---|---|
-| MCU | LPC2124/LPC2129 (Proteus ISIS simulation) |
-| Simulator | Proteus 8 Professional |
+```
+Press EINT0 → Enter Password (4 digits, masked)
+│
+├── Wrong password → "WRONG PASSWORD" → back to IDLE
+│
+└── Correct password → "AUTHENTICATION SUCCESSFUL"
+    │
+    ├── 1. RTC_EDIT
+    │   ├── 1. EDIT TIME
+    │   │   ├── Enter HOUR  (0–23, validated)
+    │   │   └── Enter MIN   (0–59, validated) → setRtcTime()
+    │   ├── 2. EDIT DATE
+    │   │   ├── Enter DAY   (1–31, validated)
+    │   │   ├── Enter MONTH (1–12, validated)
+    │   │   └── Enter YEAR  (4 digits) → setRtcDate()
+    │   └── 3. EXIT → main menu
+    │
+    ├── 2. SET_EXAM_TIME
+    │   ├── 1. EXAM START TIME
+    │   │   ├── Enter hour  (0–23, validated)
+    │   │   └── Enter min   (0–59, validated)
+    │   ├── 2. EXAM DURATION
+    │   │   └── Enter minutes (0–99)
+    │   └── 3. EXIT → main menu
+    │
+    ├── 3. EDIT PASSWORD
+    │   ├── Enter current password
+    │   ├── If correct → enter new password → "PASSWORD CHANGED"
+    │   └── If wrong × 3 → "SO MANY TIMES" → back to main menu
+    │
+    └── 4. EXIT → back to IDLE
+```
 
 ---
 
-## 📍 Pin Mapping
+## Features
 
-### LPC2148 (Hardware Kit)
+- RTC-based automatic exam start — transitions to exam mode when RTC matches configured start time
+- Minute-by-minute countdown on dual multiplexed 7-segment display (00–99 min)
+- Live temperature readout via LM35 on 20×4 LCD throughout exam
+- Three-level LED alert system: Green (>3 min) → Yellow (1–3 min) → Red (<1 min)
+- Buzzer fires for 5 seconds at exam end
+- Emergency pause/resume via EINT1 — first press freezes countdown, second resumes
+- Password-protected 4-digit keypad menu with masked input (shows `*`)
+- Input validation for all time/date fields
+- Admin password change with 3-attempt lockout
+- Timer0 ISR drives 7-segment refresh every 5 ms — fully non-blocking
 
-| Component | Pin(s) | Notes |
+---
+
+## Pin Mapping
+
+### LPC2148 (hardware kit)
+
+| Component | Pins | Notes |
 |---|---|---|
-| LCD D0–D7 | P0.8 – P0.15 | 8-bit mode |
-| LCD RS | P0.16 | Register select |
-| LCD EN | P0.17 | Enable strobe |
-| Keypad ROW0–3 | P1.16 – P1.19 | Output |
-| Keypad COL0–3 | P1.20 – P1.23 | Input (with pullups) |
-| 7-seg segments | P0.18 – P0.25 | A–G + DP |
-| 7-seg DSEL1 | P1.24 | Digit 1 select |
-| 7-seg DSEL2 | P1.25 | Digit 2 select |
-| LM35 (ADC) | P0.28 (AD0.1) | CH1 |
-| Green LED | P1.26 | Active LOW |
-| Yellow LED | P1.27 | Active LOW |
-| Red LED | P1.28 | Active LOW |
-| Buzzer | P1.29 | Active HIGH |
-| EINT0 (Config SW) | P0.16 | Hardwired on board |
-| EINT1 (Pause SW) | P0.14 | Hardwired on board |
+| LCD data D0–D7 | P0.8 – P0.15 | 8-bit mode |
+| LCD RS / EN | P0.16 / P0.17 | |
+| Keypad rows | P1.16 – P1.19 | output |
+| Keypad cols | P1.20 – P1.23 | input + pullups |
+| 7-seg segments | P0.18 – P0.25 | A–G+DP |
+| 7-seg DSEL1 / DSEL2 | P1.24 / P1.25 | active high digit select |
+| LM35 | P0.28 (AD0.1) | ADC channel 1 |
+| Green LED | P1.26 | active low |
+| Yellow LED | P1.27 | active low |
+| Red LED | P1.28 | active low |
+| Buzzer | P1.29 | active high via BC109 |
+| EINT0 config switch | P0.16 | hardwired on board |
+| EINT1 pause switch | P0.14 | hardwired on board |
 
-### LPC2129 (Proteus Simulation)
+### LPC2129 (Proteus simulation)
 
-| Component | Pin(s) | Notes |
-|---|---|---|
-| LCD D0–D7 | P0.8 – P0.15 | 8-bit mode |
-| LCD RS | P0.16 | |
-| LCD EN | P0.17 | |
-| Keypad ROW0–3 | P1.16 – P1.19 | |
-| Keypad COL0–3 | P1.20 – P1.23 | |
-| 7-seg segments | P0.18 – P0.25 | |
-| 7-seg DSEL1/2 | P1.24 / P1.25 | |
-| LM35 | P0.28 (AD0.1) | |
-| LEDs | P1.26 – P1.28 | |
-| Buzzer | P1.29 | |
-| EINT0 (Config) | P0.1 | EINT0 alt function on LPC2129 |
-| EINT1 (Pause) | P0.3 | EINT1 alt function on LPC2129 |
-
-> **Note:** LPC2129 and LPC2148 differ in EINT pin locations — handled via `#define CPU LPC2129 / LPC2148` conditional compilation in `mini_pro_defines.h`
+Same as above except EINT pins: P0.1 (EINT0) and P0.3 (EINT1).  
+Handled via `#define CPU LPC2129 / LPC2148` conditional in `mini_pro_defines.h`.
 
 ---
 
-## 📁 Project Structure
+## VIC Interrupt Allocation
+
+| Slot | Channel | Source | ISR | Trigger |
+|---|---|---|---|---|
+| 0 | 4 | Timer0 | `timer0_isr()` | every 1 ms |
+| 1 | 14 | EINT0 | `eint0_isr()` | falling edge, P0.1/P0.16 |
+| 2 | 15 | EINT1 | `eint1_isr()` | falling edge, P0.3/P0.14 |
+
+Both external interrupts use 20 ms software debounce with pin re-verification inside the ISR.
+
+---
+
+## File Structure
 
 ```
-Smart-Exam-Hall-Management-LPC2148/
+Smart_Exam_Hall_Monitoring_and_Management_System/
 │
 ├── README.md
 │
 ├── src/
-│   ├── mini_project_main.c      # Main application — state machine
-│   ├── mini_pro_defines.h       # All pin definitions, peripheral constants
-│   ├── headers.h                # Master include header
+│   ├── mini_project_main.c      ← main application, state machine
+│   ├── mini_pro_defines.h       ← all pin/peripheral constants
+│   ├── headers.h                ← master include file
 │   │
-│   ├── lcd.c / lcd.h            # HD44780 LCD driver (8-bit, register-level)
-│   ├── kpm.c / kpm.h            # 4×4 matrix keypad driver
-│   ├── seg.c / seg.h            # 7-segment multiplexed display driver
-│   ├── rtc.c / rtc.h            # RTC driver (CCR, PREINT, PREFRAC)
-│   ├── adc.c / adc.h            # ADC driver (10-bit, polling)
-│   ├── lm35.c / lm35.h          # LM35 temperature sensor wrapper
-│   ├── interrupt.c / interrupt.h # EINT0/EINT1 VIC configuration + ISRs
-│   ├── timer_delay.c / timer_delay.h # Timer0 ISR (ms_tick + 7-seg refresh)
-│   └── delay.c / delay.h        # Software delay utilities
+│   ├── lcd.c                    ← HD44780 driver (8-bit, register-level)
+│   ├── lcd.h
+│   │
+│   ├── kpm.c                    ← 4×4 keypad (row scan, backspace, masked)
+│   ├── kpm.h
+│   │
+│   ├── seg.c                    ← dual 7-seg, Timer0 ISR refresh
+│   ├── seg.h
+│   │
+│   ├── rtc.c                    ← RTC driver (CCR, PREINT, PREFRAC)
+│   ├── rtc.h
+│   │
+│   ├── adc.c                    ← 10-bit ADC, polling mode
+│   ├── adc.h
+│   │
+│   ├── lm35.c                   ← LM35 voltage→temperature conversion
+│   ├── lm35.h
+│   │
+│   ├── interrupt.c              ← EINT0/EINT1 VIC setup + ISRs
+│   ├── interrupt.h
+│   │
+│   ├── timer_delay.c            ← Timer0 ISR, ms_tick, refreshSeg()
+│   ├── timer_delay.h
+│   │
+│   ├── delay.c                  ← software delay utilities
+│   └── delay.h
 │
-├── docs/
-│   ├── Smart_Exam_Hall_System.pdf   # Project specification document
-│   └── LPC2148_Dev_Board.pdf        # Vector India board documentation
+├── simulation/
+│   └── mini_project.pdsprj      ← Proteus simulation file
 │
-└── simulation/
-    └── mini_project.pdsprj          # Proteus simulation file
+└── docs/
+    ├── project_spec.pdf         ← project specification document
+    └── board_manual.pdf         ← Vector India LPC2148 board manual
 ```
 
 ---
 
-## ⚙️ Peripheral Drivers — Technical Details
+## How to Use These Files
 
-### LCD Driver (`lcd.c`)
-- 8-bit parallel interface (D0–D7 on P0.8–P0.15)
-- Full command set: clear, cursor positioning, display on/off
-- Custom `F32Lcd()` for floating-point temperature display
-- Backspace/cursor movement for keypad input feedback
+### Step 1 — Clone the repository
 
-### Keypad Driver (`kpm.c`)
-- Active-low row scan with pullup resistors on columns
-- Row drive via `IOSET1`/`IOCLR1` (not IOPIN direct write — avoids mixed I/O port issues)
-- `keyInput()`: multi-digit entry with backspace (`-` key) and cancel (`c` key)
-- `passInput()`: masked entry (shows `*` instead of digits)
-- `menu_sel()`: single-digit menu selection
-- Input validation for time/date ranges
-
-### Timer0 ISR (`timer_delay.c`)
-- Configured for 1ms interrupt (PCLK=15MHz, PR=14999, MR0=1)
-- `ms_tick` counter for general timing reference
-- `refreshSeg()` called every 5ms — non-blocking 7-seg multiplexing
-- VIC slot 0, channel 4
-
-### Interrupt Controller (`interrupt.c`)
-- EINT0: falling-edge, 20ms software debounce, sets `menu_flag`
-- EINT1: falling-edge, 20ms software debounce, sets `pause_flag`
-- VIC slots 1 and 2 respectively (slot 0 reserved for Timer0)
-- Both flags declared `volatile` for compiler-optimization safety
-
-### RTC Driver (`rtc.c`)
-- LPC2148: external 32.768KHz crystal (CCR bit4 CLKSRC=1)
-- LPC2129: internal PCLK prescaler (PREINT=456, PREFRAC=25024 at 15MHz PCLK)
-- Functions: `setRtcTime()`, `setRtcDate()`, `getRtcTime()`, `dispRtcTime()`
-- All pointer parameters declared `volatile u32*` to match global variable types
-
-### ADC Driver (`adc.c`)
-- 10-bit successive approximation ADC
-- LM35 on CH1 (P0.28/AD0.1), PINSEL1 configured accordingly
-- Conversion formula: `voltage = (3.3/1024) × digital_value`, `temp_C = voltage × 100`
-- Polling-based conversion with DONE_BIT check
-
----
-
-## 🔌 VIC Interrupt Allocation
-
-| Slot | Channel | Source | ISR |
-|---|---|---|---|
-| 0 | 4 | Timer0 | `timer0_isr()` — 7-seg refresh every 5ms |
-| 1 | 14 | EINT0 | `eint0_isr()` — config mode trigger |
-| 2 | 15 | EINT1 | `eint1_isr()` — pause/resume toggle |
-
----
-
-## 🚀 Build & Flash
-
-### Requirements
-- **Keil MDK** (µVision 4 or 5)
-- **Flash Magic** (for flashing via ISP/UART)
-- **USB-UART converter** or DB-9 cable
-
-### Build Steps
-1. Open `mini_project.uvproj` in Keil µVision
-2. Select target (LPC2148 or LPC2129)
-3. Build → `Project → Build Target` (F7)
-4. Output: `Objects/mini_project.hex`
-
-### Flash Steps (LPC2148 Kit)
-1. Set ISP switch to LOAD position on Vector board
-2. Press RESET
-3. Open Flash Magic → select COM port, baud 115200, LPC2148
-4. Browse to `.hex` file → Start
-5. Set ISP switch back to EXE position
-6. Press RESET — system boots
-
----
-
-## 📋 Configuration Menu Flow
-
-```
-Power ON → "SYSTEM READY" → Default Screen (TIME / DATE / TEMP)
-│
-├── Press EINT0 → "MENU MODE" → Enter Password (4 digits)
-│   │
-│   ├── Wrong Password → "WRONG PASSWORD" → Return to idle
-│   │
-│   └── Correct Password → "AUTHENTICATION SUCCESSFUL"
-│       │
-│       ├── 1. RTC_EDIT
-│       │   ├── 1. EDIT TIME → Enter HOUR (0-23) → MINUTES (0-59)
-│       │   ├── 2. EDIT DATE → DAY (1-31) → MONTH (1-12) → YEAR (4 digits)
-│       │   └── 3. EXIT → back to main menu
-│       │
-│       ├── 2. SET_EXAM_TIME
-│       │   ├── 1. EXAM_START_TIME → HR (0-23) → MIN (0-59)
-│       │   ├── 2. EXAM_DURATION → minutes (0-99)
-│       │   └── 3. EXIT → back to main menu
-│       │
-│       ├── 3. EDIT_PASSWORD
-│       │   └── Enter current → Enter new → "PASSWORD CHANGED"
-│       │       (3 wrong attempts → locked out)
-│       │
-│       └── 4. EXIT → Return to idle screen
-│
-└── Exam auto-starts when RTC time == configured start time
-    │
-    ├── LCD: current time + temperature + remaining minutes
-    ├── 7-seg: countdown in minutes (MM)
-    ├── Green LED: > 3 minutes remaining
-    ├── Yellow LED: 1–3 minutes remaining
-    ├── Red LED: < 1 minute remaining
-    │
-    ├── Press EINT1 → "PAUSED" (countdown freezes, RTC continues)
-    │   └── Press EINT1 again → "RESUMED" (1 sec) → countdown continues
-    │
-    └── Countdown reaches 0 → "EXAM OVER" + Buzzer (5 sec) → Return to idle
+```bash
+git clone https://github.com/anilss1812/Smart_Exam_Hall_Monitoring_and_Management_System.git
+cd Smart_Exam_Hall_Monitoring_and_Management_System
 ```
 
+### Step 2 — Open in Keil MDK
+
+1. Open **Keil µVision** (v4 or v5)
+2. Go to `Project → Open Project`
+3. Select `mini_project.uvproj`
+4. In the **Project** panel on the left, confirm all `.c` files are listed under Source Group 1:
+   - `mini_project_main.c`
+   - `lcd.c`, `kpm.c`, `seg.c`, `rtc.c`, `adc.c`, `lm35.c`
+   - `interrupt.c`, `timer_delay.c`, `delay.c`
+
+### Step 3 — Select target device
+
+- Go to `Project → Options for Target`
+- Under **Device** tab → select **NXP LPC2148** (or LPC2129 for simulation)
+- Under **Target** tab → set Crystal frequency to **12 MHz**
+- Under **C/C++** tab → add these defines if not present:
+  ```
+  CPU=LPC2148
+  ```
+
+### Step 4 — Build
+
+Press **F7** or go to `Project → Build Target`.  
+Expected output:
+```
+Build Output:
+linking...
+Program Size: Code=XXXX RO-data=XX RW-data=XX ZI-data=XXXX
+".\Objects\mini_project.axf" - 0 Error(s), 0 Warning(s).
+```
+The `.hex` file will appear in `Objects/mini_project.hex`.
+
+### Step 5 — Flash to hardware (LPC2148 kit)
+
+**Hardware setup:**
+1. Connect USB-UART converter: TX→RXD0 (P0.1), RX→TXD0 (P0.0), GND→GND
+2. Set **ISP switch** on the Vector board to **LOAD** position
+3. Press the **RESET** button
+
+**Flash Magic setup:**
+1. Open Flash Magic
+2. Select COM port (check Device Manager for your USB-UART COM port)
+3. Baud rate: **115200**
+4. Device: **LPC2148**
+5. Interface: **None (ISP)**
+6. Oscillator frequency: **12 MHz**
+7. Browse to `Objects/mini_project.hex`
+8. Click **Start**
+
+**After flashing:**
+1. Set ISP switch back to **EXE** position
+2. Press **RESET**
+3. LCD shows `EXAM HALL / MONITORING SYSTEM` splash screen for 1 second
+4. Then switches to default screen showing TIME / DATE / TEMP
+
+### Step 6 — Run in Proteus simulation
+
+1. Open `simulation/mini_project.pdsprj` in **Proteus ISIS**
+2. Make sure the `.hex` file path in the LPC2124 component properties points to your built `mini_project.hex`
+3. Right-click LPC2124 component → **Edit Properties** → set `Program File` to your `.hex`
+4. Click **Run** (green play button)
+
+> **Note:** Proteus simulation runs slower than real hardware. RTC ticks appearing slow is a simulator limitation, not a code bug. Test timing-critical behavior on real hardware.
+
+### Step 7 — Operating the system
+
+**On first power-up:**
+- System displays splash screen then shows TIME / DATE / TEMP on the 20×4 LCD
+- Default RTC time is set to 10:10:00 in code — update via CONFIG mode
+
+**To configure the exam:**
+1. Press **SW1** (EINT0) → enter password (default: **1234**)
+2. Select `2. SET_EXAM_TIME`
+3. Enter exam start hour and minute
+4. Enter exam duration in minutes
+5. Select `4. EXIT` to return to idle
+6. The system will auto-start the exam when RTC reaches the configured time
+
+**During the exam:**
+- LCD row 1: current RTC time
+- LCD row 2: remaining minutes (REMAINING: XX)
+- LCD row 3: current temperature
+- 7-seg: remaining minutes as two-digit countdown
+- Press **SW2** (EINT1) to pause — "PAUSED" appears on LCD
+- Press **SW2** again to resume — "RESUMED" appears for 1 second
+
+**At exam end:**
+- Buzzer sounds for 5 seconds
+- LCD shows "EXAM OVER / TIME IS UP"
+- Red LED turns ON
+- Press **SW1** (EINT0) to acknowledge and return to idle
+
 ---
 
-## 🐛 Key Debugging Lessons
+## Keypad Layout
 
-During development, several important embedded programming issues were encountered and resolved:
+```
+┌────┬────┬────┬────┐
+│ 1  │ 2  │ 3  │ A  │
+├────┼────┼────┼────┤
+│ 4  │ 5  │ 6  │ B  │
+├────┼────┼────┼────┤
+│ 7  │ 8  │ 9  │ C  │  
+├────┼────┼────┼────┤
+│ *  │ 0  │ #  │ D  │  ← D = backspace , * = cancel/exit, # = confirm
+└────┴────┴────┴────┘
+```
 
-| Issue | Root Cause | Fix |
+| Key | Function |
+|---|---|
+| `0`–`9` | digit input |
+| `#` | confirm entry (only accepted after all required digits are entered) |
+| `D` | backspace — deletes last entered digit |
+| `*` | cancel — exits current input, returns to previous menu |
+| `1`–`4` | menu selection in config menus |
+
+---
+
+## Key Bugs Resolved
+
+Worth knowing for anyone working on similar bare-metal ARM7 projects:
+
+| Issue | Root cause | Fix |
 |---|---|---|
-| RTC appearing slow | Proteus simulation runs slower than real-time | Test on real hardware — RTC was accurate |
-| 7-seg flickering | Blocking `delay_ms()` in main loop starving refresh | Moved to Timer0 ISR-driven `refreshSeg()` |
-| LCD garbage text | LCD write called every loop pass (thousands/sec) | Moved to `if(sec != last_sec)` — once per second |
-| Interrupt not re-triggering | `pause_flag`/`menu_flag` not declared `volatile` | Added `volatile` keyword |
-| ISR corrupting VIC | `VICVectAddr0 = 0` instead of `VICVectAddr = 0` | Corrected register name (no suffix) |
-| Switch bounce | Mechanical switch oscillates on press | 20ms software debounce in ISR |
-| ADC reading wrong | `CH0` selected but LM35 on `CH1` (P0.28) | Changed to `CH1` in `lm35.c` |
-| Cursor position wrong | `dispRtcTime()` leaves cursor in row1 | Added `cmdLcd(GOTO_LINE2_POS0)` before next write |
-| PINSEL overwriting | `PINSEL0 = value` clearing other pin configs | Changed to `PINSEL0 |= value` |
+| 7-seg flickering | Blocking `delay_ms()` in main loop starved refresh | Timer0 ISR — `refreshSeg()` every 5 ms |
+| LCD garbage text | LCD writes called every loop iteration | Gated inside `if(sec != last_sec)` |
+| Interrupts not re-triggering | Flags missing `volatile` keyword | Added `volatile u8 menu_flag, pause_flag` |
+| VIC corruption after first ISR | `VICVectAddr0 = 0` instead of `VICVectAddr = 0` | Corrected — no numeric suffix on the end-of-interrupt register |
+| Pause toggling instantly | `pause_flag` set again during `delay_ms(1000)` | Added `pause_flag = 0` after each delay in pause/resume block |
+| ADC reading ~350°C | `CH0` (P0.27) selected but LM35 on `CH1` (P0.28) | Changed to `CH1` in `lm35.c` |
+| `=` accepted without full input | `=` not gated by digit-count check | Added `if(cnt == nodigit)` guard |
+| Switch bounce on hardware | Mechanical contact oscillation | 20 ms ISR debounce + pin re-verify |
+| PINSEL clearing other pins | `PINSEL0 = value` overwrote entire register | Changed to `PINSEL0 |= value` |
 
 ---
+
+## About
+
+**Tumma Anil Sri Sai**  
+B.Tech ECE — Sasi Institute of Technology and Engineering, Tadepalligudem (2026)  
+6-month embedded systems industry training — Vector India, Hyderabad  
+Training track: C → ARM7 architecture → DSA → C++ → Linux internals → TCP/IP
 
 ## 👨‍💻 Author
 
@@ -335,12 +424,6 @@ B.Tech Electronics and Communication Engineering
 **Connect:**  
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://linkedin.com/in/tumma-anil-sri-sai)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-black)](https://github.com/anilss1812)
-
----
-
-## 📄 License
-
-This project is open-source under the MIT License. Feel free to use, modify, and distribute with attribution.
 
 ---
 
