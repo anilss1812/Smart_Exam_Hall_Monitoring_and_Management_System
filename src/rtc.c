@@ -1,8 +1,9 @@
 //rtc.c
 #include <lpc21xx.h>
-#include "mini_pro_defines.h"
 #include "types.h"
-#include "headers.h"
+#include "rtc_defines.h"
+#include "lcd.h"
+
 
 s8 week[][4] = {"SUN","MON","TUS","WED","THR","FRI","SAT"};
 extern vu32 hour,min,sec,dom,mon,year,day;
